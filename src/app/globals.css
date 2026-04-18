@@ -1,26 +1,107 @@
 @import "tailwindcss";
 
+/* 큐티 디자인 토큰: Dawn — 새벽 공부
+   라벤더→피치 그라디언트 + 딥네이비 텍스트 + frosted 카드 + 선셋 코랄 */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* 배경 그라디언트 */
+  --bg-grad-start: #E7D7E8;   /* 라벤더 */
+  --bg-grad-mid:   #F0D4D0;   /* 부드러운 연결 */
+  --bg-grad-end:   #F3CBB3;   /* 피치 */
+
+  /* 프로스티드 카드 */
+  --bg-card: rgba(255, 255, 255, 0.72);
+  --bg-card-strong: rgba(255, 255, 255, 0.88);
+  --bg-subtle: rgba(255, 255, 255, 0.38);
+
+  /* 다크 프레임 (집중모드) */
+  --bg-frame: #141733;        /* 깊은 새벽 네이비 */
+  --bg-frame-card: #1F2340;
+
+  /* 텍스트 — 딥네이비 */
+  --text-dark: #1F2340;
+  --text-mid: #4A5070;
+  --text-light: #8B91A8;
+  --text-on-frame: #F3CBB3;   /* 다크 위에서 쓰는 따뜻한 톤 */
+
+  /* 포인트 */
+  --primary: #1F2340;         /* 브랜드=딥네이비 */
+  --cta: #F59B82;             /* 선셋 코랄 */
+  --cta-hover: #EE8469;
+  --warm: #F3CBB3;            /* 피치 */
+  --lavender: #C9A8D4;        /* 라벤더 악센트 */
+  --gold: #E9C98E;            /* 새벽 골드 */
+  --success: #7AA88E;         /* 잔디색 */
+  --danger: #D0644F;
+
+  /* 라인 */
+  --border: rgba(255, 255, 255, 0.55);
+  --border-strong: rgba(31, 35, 64, 0.08);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg-card: var(--bg-card);
+  --color-bg-card-strong: var(--bg-card-strong);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-bg-frame: var(--bg-frame);
+  --color-bg-frame-card: var(--bg-frame-card);
+
+  --color-primary: var(--primary);
+  --color-cta: var(--cta);
+  --color-cta-hover: var(--cta-hover);
+  --color-warm: var(--warm);
+  --color-lavender: var(--lavender);
+  --color-gold: var(--gold);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+
+  --color-text-dark: var(--text-dark);
+  --color-text-mid: var(--text-mid);
+  --color-text-light: var(--text-light);
+  --color-text-on-frame: var(--text-on-frame);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@font-face {
+  font-family: "Pretendard Variable";
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/PretendardVariable.woff2")
+    format("woff2-variations");
+}
+
+html,
+body {
+  color: var(--text-dark);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* 새벽 그라디언트: 좌상단 라벤더 → 우하단 피치. 약한 오버레이로 부드럽게 */
+  background:
+    radial-gradient(120% 80% at 0% 0%, var(--bg-grad-start) 0%, transparent 55%),
+    radial-gradient(120% 80% at 100% 100%, var(--bg-grad-end) 0%, transparent 55%),
+    linear-gradient(180deg, var(--bg-grad-start) 0%, var(--bg-grad-mid) 50%, var(--bg-grad-end) 100%);
+  background-attachment: fixed;
+  min-height: 100dvh;
+}
+
+/* frosted 유틸 */
+.frosted {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid var(--border);
+}
+
+/* 스크롤바는 조용히 */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
