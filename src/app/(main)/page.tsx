@@ -1,40 +1,61 @@
-import { PageHeader } from "@/components/shared/PageHeader";
-import { UserBadge } from "@/components/shared/UserBadge";
+import { DDayCard } from "@/features/home/DDayCard";
+import { GreetingHeader } from "@/features/home/GreetingHeader";
+import { MoodCheckin } from "@/features/home/MoodCheckin";
+import { QIOverview } from "@/features/home/QIOverview";
+import { StartButton } from "@/features/home/StartButton";
+import { StaggerItem, StaggerList } from "@/features/home/StaggerContainer";
+import { TodoList } from "@/features/home/TodoList";
+import { computeDDay } from "@/features/home/dday";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export default function HomePage() {
+function formatDateKo(now: Date) {
+  const w = ["일", "월", "화", "수", "목", "금", "토"];
+  return `${now.getMonth() + 1}월 ${now.getDate()}일 ${w[now.getDay()]}요일`;
+}
+
+export default async function HomePage() {
+  let name = "재현";
+  try {
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      name =
+        (user.user_metadata?.nickname as string | undefined) ??
+        (user.user_metadata?.full_name as string | undefined) ??
+        (user.user_metadata?.name as string | undefined) ??
+        user.email?.split("@")[0] ??
+        "재현";
+    }
+  } catch {
+    // env 미설정 등은 무시 — 기본 이름 사용
+  }
+
+  const now = new Date();
+  const dday = computeDDay(now);
+
   return (
     <>
-      <div className="flex items-start justify-between px-5 pt-6">
-        <p className="text-[11px] tracking-[0.3em] text-[var(--text-mid)] uppercase">
-          dawn study
-        </p>
-        <UserBadge />
-      </div>
+      <GreetingHeader name={name} dateText={formatDateKo(now)} />
 
-      <PageHeader title="오늘도 한 계단" subtitle="시간이 아니라 질(QI)." />
-
-      <div className="px-5">
-        <div className="frosted rounded-3xl p-6 shadow-[0_20px_60px_-30px_rgba(31,35,64,0.2)]">
-          <div className="flex items-center justify-between">
-            <span className="text-xs tracking-[0.25em] text-[var(--text-mid)] uppercase">
-              D-day
-            </span>
-            <span className="rounded-full bg-[var(--cta)]/15 px-2.5 py-0.5 text-[11px] font-medium text-[var(--cta)]">
-              수능까지
-            </span>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-[64px] leading-none font-semibold tracking-tight text-[var(--text-dark)]">
-              D-16
-            </span>
-            <span className="text-sm text-[var(--text-mid)]">7개월 남음</span>
-          </div>
-        </div>
-
-        <p className="mt-4 text-center text-[11px] tracking-wide text-[var(--text-light)] uppercase">
-          home — built in step 3
-        </p>
-      </div>
+      <StaggerList>
+        <StaggerItem>
+          <DDayCard label={dday.label} sub={dday.sub} target="2026 수능" />
+        </StaggerItem>
+        <StaggerItem>
+          <MoodCheckin />
+        </StaggerItem>
+        <StaggerItem>
+          <QIOverview />
+        </StaggerItem>
+        <StaggerItem>
+          <TodoList />
+        </StaggerItem>
+        <StaggerItem className="mt-1">
+          <StartButton />
+        </StaggerItem>
+      </StaggerList>
     </>
   );
 }
