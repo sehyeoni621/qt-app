@@ -41,10 +41,12 @@ function LoginContent() {
   const [error, setError] = useState<string | null>(
     searchParams.get("error") && decodeURIComponent(searchParams.get("error")!)
   );
+  const [info, setInfo] = useState<string | null>(null);
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setInfo(null);
     setLoading(true);
     const supabase = createSupabaseBrowserClient();
     const email = toEmail(loginId);
@@ -64,6 +66,7 @@ function LoginContent() {
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setInfo(null);
 
     const name = signupName.trim();
     const id = signupId.trim();
@@ -81,7 +84,7 @@ function LoginContent() {
     const supabase = createSupabaseBrowserClient();
     const email = toEmail(id);
 
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password: signupPw,
       options: {
@@ -95,25 +98,15 @@ function LoginContent() {
       return;
     }
 
-    // 세션 바로 돌아오면 성공
-    if (data.session) {
-      router.push("/");
-      router.refresh();
-      return;
-    }
-
-    // 세션 없을 때 (서버 설정에 따라): 같은 자격으로 즉시 로그인 시도
-    const { error: signinErr } = await supabase.auth.signInWithPassword({
-      email,
-      password: signupPw,
-    });
-    if (signinErr) {
-      setError("계정은 생성됐어요. 로그인 탭에서 다시 시도해주세요.");
-      setLoading(false);
-      return;
-    }
-    router.push("/");
-    router.refresh();
+    // 가입 완료 → 로그인 탭으로 전환, 아이디 미리 채워둠
+    setMode("signin");
+    setLoginId(id);
+    setLoginPw("");
+    setSignupName("");
+    setSignupId("");
+    setSignupPw("");
+    setInfo(`${name}님, 가입 완료됐어요. 비밀번호로 로그인해주세요.`);
+    setLoading(false);
   }
 
   return (
@@ -181,6 +174,7 @@ function LoginContent() {
             />
           </Field>
 
+          {info && <InfoBox>{info}</InfoBox>}
           {error && <ErrorBox>{error}</ErrorBox>}
 
           <button
@@ -279,10 +273,20 @@ function ErrorBox({ children }: { children: React.ReactNode }) {
   );
 }
 
+function InfoBox({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-2xl bg-[var(--success)]/15 px-3 py-2 text-xs leading-relaxed text-[var(--success)]">
+      {children}
+    </p>
+  );
+}
+
 function translateError(message: string): string {
   const m = message.toLowerCase();
+  if (m.includes("email not confirmed"))
+    return "계정이 아직 인증되지 않았습니다. 관리자에게 문의하거나 잠시 후 다시 시도해주세요.";
   if (m.includes("invalid login credentials"))
-    return "아이디 또는 비밀번호가 올바르지 않습니다.";
+    return "아이디 또는 비밀번호가 일치하지 않습니다. (또는 계정이 아직 인증되지 않았을 수 있어요)";
   if (m.includes("user already registered"))
     return "이미 사용 중인 아이디입니다. 로그인 탭에서 시도해보세요.";
   if (m.includes("email address") && m.includes("invalid"))
