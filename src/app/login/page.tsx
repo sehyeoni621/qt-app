@@ -158,11 +158,11 @@ function LoginContent() {
           onSubmit={handleSignIn}
           className="frosted flex flex-col gap-3 rounded-3xl p-6 shadow-[0_20px_60px_-30px_rgba(31,35,64,0.25)]"
         >
-          <Field label="아이디" hint="이메일로 가입한 계정이면 이메일도 가능">
+          <Field label="아이디">
             <input
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
-              placeholder="ed4421 또는 email@…"
+              placeholder="ed4421"
               autoComplete="username"
               required
               className="rounded-2xl bg-white/80 px-4 py-3 text-[15px] text-[var(--text-dark)] outline-none ring-1 ring-[var(--border-strong)] focus:ring-2 focus:ring-[var(--cta)]"
@@ -195,7 +195,7 @@ function LoginContent() {
           onSubmit={handleSignUp}
           className="frosted flex flex-col gap-3 rounded-3xl p-6 shadow-[0_20px_60px_-30px_rgba(31,35,64,0.25)]"
         >
-          <Field label="이름" hint="앱에서 표시될 이름">
+          <Field label="이름">
             <input
               value={signupName}
               onChange={(e) => setSignupName(e.target.value)}
@@ -205,7 +205,7 @@ function LoginContent() {
               className="rounded-2xl bg-white/80 px-4 py-3 text-[15px] text-[var(--text-dark)] outline-none ring-1 ring-[var(--border-strong)] focus:ring-2 focus:ring-[var(--cta)]"
             />
           </Field>
-          <Field label="아이디" hint="영문·숫자·_·- · 3~20자">
+          <Field label="아이디">
             <input
               value={signupId}
               onChange={(e) =>
@@ -255,23 +255,16 @@ function LoginContent() {
 
 function Field({
   label,
-  hint,
   children,
 }: {
   label: string;
-  hint?: string;
   children: React.ReactNode;
 }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <div className="flex items-baseline justify-between">
-        <span className="text-xs font-medium tracking-wide text-[var(--text-mid)] uppercase">
-          {label}
-        </span>
-        {hint && (
-          <span className="text-[10px] text-[var(--text-light)]">{hint}</span>
-        )}
-      </div>
+      <span className="text-xs font-medium tracking-wide text-[var(--text-mid)] uppercase">
+        {label}
+      </span>
       {children}
     </label>
   );
