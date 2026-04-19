@@ -162,7 +162,7 @@ function LoginContent() {
             <input
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
-              placeholder="ed4421"
+              placeholder="아이디를 입력하세요."
               autoComplete="username"
               required
               className="rounded-2xl bg-white/80 px-4 py-3 text-[15px] text-[var(--text-dark)] outline-none ring-1 ring-[var(--border-strong)] focus:ring-2 focus:ring-[var(--cta)]"
@@ -173,6 +173,7 @@ function LoginContent() {
               type="password"
               value={loginPw}
               onChange={(e) => setLoginPw(e.target.value)}
+              placeholder="비밀번호를 입력하세요."
               required
               minLength={6}
               autoComplete="current-password"
@@ -199,7 +200,7 @@ function LoginContent() {
             <input
               value={signupName}
               onChange={(e) => setSignupName(e.target.value)}
-              placeholder="김재현"
+              placeholder="이름을 입력하세요."
               maxLength={24}
               required
               className="rounded-2xl bg-white/80 px-4 py-3 text-[15px] text-[var(--text-dark)] outline-none ring-1 ring-[var(--border-strong)] focus:ring-2 focus:ring-[var(--cta)]"
@@ -211,7 +212,7 @@ function LoginContent() {
               onChange={(e) =>
                 setSignupId(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))
               }
-              placeholder="ed4421"
+              placeholder="아이디를 입력하세요."
               maxLength={20}
               required
               autoComplete="username"
@@ -224,7 +225,7 @@ function LoginContent() {
               type="password"
               value={signupPw}
               onChange={(e) => setSignupPw(e.target.value)}
-              placeholder="최소 6자"
+              placeholder="비밀번호를 입력하세요."
               minLength={6}
               required
               autoComplete="new-password"
