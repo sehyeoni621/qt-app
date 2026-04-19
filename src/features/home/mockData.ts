@@ -46,24 +46,22 @@ export const SUBJECT_TINT: Record<Subject, string> = {
   탐구: "var(--lavender)",
 };
 
-// 최근 7일 QI (오늘이 마지막)
-export const weeklyQi: { day: string; qi: number }[] = [
-  { day: "월", qi: 54 },
-  { day: "화", qi: 58 },
-  { day: "수", qi: 62 },
-  { day: "목", qi: 50 },
-  { day: "금", qi: 70 },
-  { day: "토", qi: 65 },
-  { day: "오늘", qi: 72 },
+// 기본 fallback 값 — 실제 데이터가 없을 때만 사용
+export const fallbackWeeklyQi: { day: string; qi: number }[] = [
+  { day: "월", qi: 0 },
+  { day: "화", qi: 0 },
+  { day: "수", qi: 0 },
+  { day: "목", qi: 0 },
+  { day: "금", qi: 0 },
+  { day: "토", qi: 0 },
+  { day: "오늘", qi: 0 },
 ];
 
-export const qiBreakdown = {
-  time: 85, // 학습시간 (0-100)
-  solves: 68, // 풀이수
-  accuracy: 72, // 정답률
+export const fallbackQiBreakdown = {
+  time: 0,
+  solves: 0,
+  accuracy: 0,
 };
-
-export const todayQi = 72;
 
 // 수능: 항상 11월 셋째 목요일. 2026년은 11/19.
 export const SUNEUNG_DATE = new Date("2026-11-19T00:00:00+09:00");

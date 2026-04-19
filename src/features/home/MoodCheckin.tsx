@@ -1,15 +1,31 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState, useTransition } from "react";
+import { setMoodAction } from "@/app/actions/home";
 import { MOOD_EMOJIS, type MoodLevel } from "./mockData";
-import { useHomeStore } from "./store";
 import { cn } from "@/lib/cn";
 
-export function MoodCheckin() {
-  const mood = useHomeStore((s) => s.mood);
-  const setMood = useHomeStore((s) => s.setMood);
+export function MoodCheckin({
+  initialMood = null,
+}: {
+  initialMood?: MoodLevel | null;
+}) {
+  const [mood, setMood] = useState<MoodLevel | null>(initialMood);
+  const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    setMood(initialMood);
+  }, [initialMood]);
 
   const current = MOOD_EMOJIS.find((m) => m.level === mood);
+
+  const handle = (level: MoodLevel) => {
+    setMood(level);
+    startTransition(() => {
+      setMoodAction(level).catch(() => {});
+    });
+  };
 
   return (
     <div className="frosted rounded-3xl p-5 shadow-[0_16px_50px_-30px_rgba(31,35,64,0.2)]">
@@ -19,12 +35,15 @@ export function MoodCheckin() {
             mood check-in
           </p>
           <p className="mt-0.5 text-sm font-medium text-[var(--text-dark)]">
-            {mood ? `지금 기분은 "${current?.label}"` : "지금 기분은 어때요?"}
+            {mood
+              ? `지금 기분은 "${current?.label}"`
+              : "지금 기분은 어때요?"}
           </p>
         </div>
         <AnimatePresence>
           {mood && (
             <motion.span
+              key={mood}
               initial={{ scale: 0.6, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.6, opacity: 0 }}
@@ -43,7 +62,7 @@ export function MoodCheckin() {
             <button
               key={level}
               type="button"
-              onClick={() => setMood(level as MoodLevel)}
+              onClick={() => handle(level as MoodLevel)}
               aria-label={label}
               aria-pressed={active}
               className={cn(
@@ -56,7 +75,11 @@ export function MoodCheckin() {
               <motion.span
                 whileTap={{ scale: 0.85 }}
                 animate={active ? { scale: [1, 1.25, 1] } : { scale: 1 }}
-                transition={{ duration: 0.35 }}
+                transition={{
+                  duration: 0.35,
+                  type: "tween",
+                  ease: "easeOut",
+                }}
                 className="text-2xl"
               >
                 {emoji}

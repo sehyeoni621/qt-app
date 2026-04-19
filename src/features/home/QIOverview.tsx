@@ -1,7 +1,8 @@
 "use client";
 
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from "recharts";
-import { qiBreakdown, todayQi, weeklyQi } from "./mockData";
+
+type Weekly = { day: string; qi: number }[];
 
 function CircularProgress({
   value,
@@ -73,8 +74,7 @@ function Bar({ label, value }: { label: string; value: number }) {
           className="h-full rounded-full"
           style={{
             width: `${pct}%`,
-            background:
-              "linear-gradient(90deg, var(--cta), var(--warm))",
+            background: "linear-gradient(90deg, var(--cta), var(--warm))",
           }}
         />
       </div>
@@ -82,25 +82,50 @@ function Bar({ label, value }: { label: string; value: number }) {
   );
 }
 
-export function QIOverview() {
+export function QIOverview({
+  total,
+  weekly,
+  breakdown,
+  deltaWeek,
+  empty,
+}: {
+  total: number;
+  weekly: Weekly;
+  breakdown: { time: number; solves: number; accuracy: number };
+  deltaWeek: number;
+  empty: boolean;
+}) {
   return (
     <div className="frosted rounded-3xl p-5 shadow-[0_16px_50px_-30px_rgba(31,35,64,0.2)]">
       <div className="flex items-center justify-between">
         <p className="text-[11px] tracking-[0.25em] text-[var(--text-mid)] uppercase">
           today&apos;s qi
         </p>
-        <span className="rounded-full bg-[var(--success)]/15 px-2.5 py-0.5 text-[11px] font-medium text-[var(--success)]">
-          ▲ 7
-        </span>
+        {!empty && (
+          <span
+            className="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+            style={{
+              background:
+                deltaWeek >= 0
+                  ? "color-mix(in oklab, var(--success) 18%, white)"
+                  : "color-mix(in oklab, var(--danger) 18%, white)",
+              color: deltaWeek >= 0 ? "var(--success)" : "var(--danger)",
+            }}
+          >
+            {deltaWeek >= 0
+              ? `▲ ${deltaWeek}`
+              : `▼ ${Math.abs(deltaWeek)}`}
+          </span>
+        )}
       </div>
 
       <div className="mt-3 flex items-center gap-5">
-        <CircularProgress value={todayQi} />
-        <div className="flex-1">
+        <CircularProgress value={total} />
+        <div className="min-w-0 flex-1">
           <div className="h-14 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <AreaChart
-                data={weeklyQi}
+                data={weekly}
                 margin={{ top: 4, right: 0, left: 0, bottom: 0 }}
               >
                 <defs>
@@ -140,18 +165,25 @@ export function QIOverview() {
             </ResponsiveContainer>
           </div>
           <div className="-mt-1 flex justify-between px-0.5 text-[10px] text-[var(--text-light)]">
-            {weeklyQi.map((w) => (
-              <span key={w.day}>{w.day}</span>
+            {weekly.map((w, i) => (
+              <span key={`${w.day}-${i}`}>{w.day}</span>
             ))}
           </div>
         </div>
       </div>
 
       <div className="mt-5 flex gap-3">
-        <Bar label="시간" value={qiBreakdown.time} />
-        <Bar label="풀이" value={qiBreakdown.solves} />
-        <Bar label="정답률" value={qiBreakdown.accuracy} />
+        <Bar label="시간" value={breakdown.time} />
+        <Bar label="풀이" value={breakdown.solves} />
+        <Bar label="정답률" value={breakdown.accuracy} />
       </div>
+
+      {empty && (
+        <p className="mt-4 rounded-2xl bg-white/50 px-3 py-2 text-[12px] leading-relaxed text-[var(--text-mid)]">
+          아직 오늘 학습 기록이 없어요. 아래 &ldquo;지금 공부 시작&rdquo;에서
+          첫 세션을 만들어보세요.
+        </p>
+      )}
     </div>
   );
 }

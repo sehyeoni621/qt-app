@@ -1,4 +1,5 @@
 import { BottomTabBar } from "./BottomTabBar";
+import { ToastHost } from "./Toast";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* 하단 탭바 (고정) */}
       <BottomTabBar />
+
+      {/* 토스트 */}
+      <ToastHost />
     </div>
   );
 }

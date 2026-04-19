@@ -1,21 +1,32 @@
-import { Timer } from "lucide-react";
+"use client";
+
+import { AnimatePresence } from "framer-motion";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { SoonCard } from "@/components/shared/SoonCard";
+import { FocusMode } from "@/features/timer/FocusMode";
+import { ResultSheet } from "@/features/timer/ResultSheet";
+import { SubjectPicker } from "@/features/timer/SubjectPicker";
+import { useTimerStore } from "@/features/timer/store";
 
 export default function StudyPage() {
+  const mode = useTimerStore((s) => s.mode);
+
   return (
     <>
-      <PageHeader
-        eyebrow="study"
-        title="학습 타이머"
-        subtitle="시간이 아니라 질(QI)을 잰다."
-      />
-      <SoonCard
-        icon={Timer}
-        title="스마트 타이머 + QI 계산기"
-        description="과목 선택 → 집중모드 다크 타이머 → 문제풀이 카운터 → 부측 방지 팝업 → 세션 종료 시 QI 산출. 이 화면이 큐티의 심장입니다."
-        phase="step 4"
-      />
+      {mode === "picker" && (
+        <>
+          <PageHeader
+            eyebrow="study"
+            title="학습 타이머"
+            subtitle="시간이 아니라 질(QI)을 잰다."
+          />
+          <SubjectPicker />
+        </>
+      )}
+
+      <AnimatePresence>
+        {mode === "focus" && <FocusMode key="focus" />}
+        {mode === "result" && <ResultSheet key="result" />}
+      </AnimatePresence>
     </>
   );
 }
