@@ -7,81 +7,113 @@ import { cn } from "@/lib/cn";
 
 type Mode = "signin" | "signup";
 
+const VIRTUAL_EMAIL_DOMAIN = "qt-app.com";
+
+function isEmail(s: string) {
+  return /@/.test(s);
+}
+
+function toEmail(idOrEmail: string) {
+  const v = idOrEmail.trim();
+  return isEmail(v) ? v.toLowerCase() : `${v.toLowerCase()}@${VIRTUAL_EMAIL_DOMAIN}`;
+}
+
+function validateId(id: string) {
+  // 영문/숫자/언더스코어/하이픈, 3~20자
+  return /^[a-zA-Z0-9_-]{3,20}$/.test(id);
+}
+
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [nickname, setNickname] = useState("");
+
+  // 로그인
+  const [loginId, setLoginId] = useState("");
+  const [loginPw, setLoginPw] = useState("");
+
+  // 회원가입
+  const [signupName, setSignupName] = useState("");
+  const [signupId, setSignupId] = useState("");
+  const [signupPw, setSignupPw] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(
     searchParams.get("error") && decodeURIComponent(searchParams.get("error")!)
   );
-  const [info, setInfo] = useState<string | null>(null);
 
-  async function submit(e: React.FormEvent) {
+  async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setInfo(null);
     setLoading(true);
     const supabase = createSupabaseBrowserClient();
-
-    if (mode === "signin") {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) {
-        setError(translateError(error.message));
-        setLoading(false);
-        return;
-      }
-      router.push("/");
-      router.refresh();
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("비밀번호는 최소 6자 이상이어야 합니다.");
-      setLoading(false);
-      return;
-    }
-    const { data, error } = await supabase.auth.signUp({
+    const email = toEmail(loginId);
+    const { error } = await supabase.auth.signInWithPassword({
       email,
-      password,
-      options: {
-        data: { nickname: nickname || email.split("@")[0] },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      password: loginPw,
     });
     if (error) {
       setError(translateError(error.message));
       setLoading(false);
       return;
     }
+    router.push("/");
+    router.refresh();
+  }
+
+  async function handleSignUp(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    const name = signupName.trim();
+    const id = signupId.trim();
+    if (!name) return setError("이름을 입력해주세요.");
+    if (!validateId(id)) {
+      return setError(
+        "아이디는 영문·숫자·_·- 만 가능해요 (3~20자)."
+      );
+    }
+    if (signupPw.length < 6) {
+      return setError("비밀번호는 최소 6자 이상이어야 합니다.");
+    }
+
+    setLoading(true);
+    const supabase = createSupabaseBrowserClient();
+    const email = toEmail(id);
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: signupPw,
+      options: {
+        data: { nickname: name, username: id },
+      },
+    });
+
+    if (error) {
+      setError(translateError(error.message));
+      setLoading(false);
+      return;
+    }
+
+    // 세션 바로 돌아오면 성공
     if (data.session) {
       router.push("/");
       router.refresh();
-    } else {
-      setInfo(
-        "인증 메일을 보냈어요. 받은편지함에서 링크를 눌러주세요. (개발 중엔 Supabase 대시보드에서 Confirm email을 OFF 해주세요)"
-      );
-      setLoading(false);
-    }
-  }
-
-  async function resetPassword() {
-    if (!email) {
-      setError("이메일을 먼저 입력해주세요.");
       return;
     }
-    const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback`,
+
+    // 세션 없을 때 (서버 설정에 따라): 같은 자격으로 즉시 로그인 시도
+    const { error: signinErr } = await supabase.auth.signInWithPassword({
+      email,
+      password: signupPw,
     });
-    if (error) setError(translateError(error.message));
-    else setInfo("비밀번호 재설정 링크를 메일로 보냈습니다.");
+    if (signinErr) {
+      setError("계정은 생성됐어요. 로그인 탭에서 다시 시도해주세요.");
+      setLoading(false);
+      return;
+    }
+    router.push("/");
+    router.refresh();
   }
 
   return (
@@ -108,7 +140,6 @@ function LoginContent() {
             onClick={() => {
               setMode(m);
               setError(null);
-              setInfo(null);
             }}
             className={cn(
               "flex-1 rounded-full py-2 transition-colors",
@@ -122,105 +153,146 @@ function LoginContent() {
         ))}
       </div>
 
-      <form
-        onSubmit={submit}
-        className="frosted flex flex-col gap-3 rounded-3xl p-6 shadow-[0_20px_60px_-30px_rgba(31,35,64,0.25)]"
-      >
-        {mode === "signup" && (
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium tracking-wide text-[var(--text-mid)] uppercase">
-              닉네임 <span className="text-[var(--text-light)]">(선택)</span>
-            </span>
+      {mode === "signin" ? (
+        <form
+          onSubmit={handleSignIn}
+          className="frosted flex flex-col gap-3 rounded-3xl p-6 shadow-[0_20px_60px_-30px_rgba(31,35,64,0.25)]"
+        >
+          <Field label="아이디" hint="이메일로 가입한 계정이면 이메일도 가능">
             <input
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              placeholder="재현"
-              maxLength={16}
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
+              placeholder="ed4421 또는 email@…"
+              autoComplete="username"
+              required
               className="rounded-2xl bg-white/80 px-4 py-3 text-[15px] text-[var(--text-dark)] outline-none ring-1 ring-[var(--border-strong)] focus:ring-2 focus:ring-[var(--cta)]"
             />
-          </label>
-        )}
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium tracking-wide text-[var(--text-mid)] uppercase">
-            이메일
-          </span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            autoComplete="email"
-            className="rounded-2xl bg-white/80 px-4 py-3 text-[15px] text-[var(--text-dark)] outline-none ring-1 ring-[var(--border-strong)] focus:ring-2 focus:ring-[var(--cta)]"
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium tracking-wide text-[var(--text-mid)] uppercase">
-            비밀번호
-          </span>
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="최소 6자"
-            autoComplete={
-              mode === "signin" ? "current-password" : "new-password"
-            }
-            className="rounded-2xl bg-white/80 px-4 py-3 text-[15px] text-[var(--text-dark)] outline-none ring-1 ring-[var(--border-strong)] focus:ring-2 focus:ring-[var(--cta)]"
-          />
-        </label>
+          </Field>
+          <Field label="비밀번호">
+            <input
+              type="password"
+              value={loginPw}
+              onChange={(e) => setLoginPw(e.target.value)}
+              required
+              minLength={6}
+              autoComplete="current-password"
+              className="rounded-2xl bg-white/80 px-4 py-3 text-[15px] text-[var(--text-dark)] outline-none ring-1 ring-[var(--border-strong)] focus:ring-2 focus:ring-[var(--cta)]"
+            />
+          </Field>
 
-        {error && (
-          <p className="rounded-2xl bg-[var(--danger)]/10 px-3 py-2 text-xs leading-relaxed text-[var(--danger)]">
-            {error}
-          </p>
-        )}
-        {info && (
-          <p className="rounded-2xl bg-[var(--success)]/15 px-3 py-2 text-xs leading-relaxed text-[var(--success)]">
-            {info}
-          </p>
-        )}
+          {error && <ErrorBox>{error}</ErrorBox>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-2 rounded-full bg-[var(--cta)] px-4 py-3.5 text-sm font-semibold text-white shadow-[0_10px_30px_-10px_rgba(245,155,130,0.6)] transition-colors hover:bg-[var(--cta-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading
-            ? "잠시만요…"
-            : mode === "signin"
-              ? "로그인"
-              : "가입하고 시작하기"}
-        </button>
-
-        {mode === "signin" && (
           <button
-            type="button"
-            onClick={resetPassword}
-            className="mt-1 text-xs text-[var(--text-mid)] hover:text-[var(--text-dark)]"
+            type="submit"
+            disabled={loading}
+            className="mt-2 rounded-full bg-[var(--cta)] px-4 py-3.5 text-sm font-semibold text-white shadow-[0_10px_30px_-10px_rgba(245,155,130,0.6)] transition-colors hover:bg-[var(--cta-hover)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            비밀번호 잊으셨나요?
+            {loading ? "로그인 중…" : "로그인"}
           </button>
-        )}
-      </form>
+        </form>
+      ) : (
+        <form
+          onSubmit={handleSignUp}
+          className="frosted flex flex-col gap-3 rounded-3xl p-6 shadow-[0_20px_60px_-30px_rgba(31,35,64,0.25)]"
+        >
+          <Field label="이름" hint="앱에서 표시될 이름">
+            <input
+              value={signupName}
+              onChange={(e) => setSignupName(e.target.value)}
+              placeholder="김재현"
+              maxLength={24}
+              required
+              className="rounded-2xl bg-white/80 px-4 py-3 text-[15px] text-[var(--text-dark)] outline-none ring-1 ring-[var(--border-strong)] focus:ring-2 focus:ring-[var(--cta)]"
+            />
+          </Field>
+          <Field label="아이디" hint="영문·숫자·_·- · 3~20자">
+            <input
+              value={signupId}
+              onChange={(e) =>
+                setSignupId(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))
+              }
+              placeholder="ed4421"
+              maxLength={20}
+              required
+              autoComplete="username"
+              autoCapitalize="none"
+              className="rounded-2xl bg-white/80 px-4 py-3 text-[15px] text-[var(--text-dark)] outline-none ring-1 ring-[var(--border-strong)] focus:ring-2 focus:ring-[var(--cta)]"
+            />
+          </Field>
+          <Field label="비밀번호">
+            <input
+              type="password"
+              value={signupPw}
+              onChange={(e) => setSignupPw(e.target.value)}
+              placeholder="최소 6자"
+              minLength={6}
+              required
+              autoComplete="new-password"
+              className="rounded-2xl bg-white/80 px-4 py-3 text-[15px] text-[var(--text-dark)] outline-none ring-1 ring-[var(--border-strong)] focus:ring-2 focus:ring-[var(--cta)]"
+            />
+          </Field>
+
+          {error && <ErrorBox>{error}</ErrorBox>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-2 rounded-full bg-[var(--cta)] px-4 py-3.5 text-sm font-semibold text-white shadow-[0_10px_30px_-10px_rgba(245,155,130,0.6)] transition-colors hover:bg-[var(--cta-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? "가입 중…" : "가입하고 시작하기"}
+          </button>
+        </form>
+      )}
 
       <p className="text-center text-[11px] leading-relaxed text-[var(--text-light)]">
-        Google 간편 로그인은 배포 직전에 활성화됩니다.
+        가입 시 이용약관과 개인정보처리방침에 동의하는 것으로 간주됩니다.
+        <br />
+        큐티는 성적·감정 데이터를 암호화해 저장합니다.
       </p>
     </main>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <div className="flex items-baseline justify-between">
+        <span className="text-xs font-medium tracking-wide text-[var(--text-mid)] uppercase">
+          {label}
+        </span>
+        {hint && (
+          <span className="text-[10px] text-[var(--text-light)]">{hint}</span>
+        )}
+      </div>
+      {children}
+    </label>
+  );
+}
+
+function ErrorBox({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-2xl bg-[var(--danger)]/10 px-3 py-2 text-xs leading-relaxed text-[var(--danger)]">
+      {children}
+    </p>
   );
 }
 
 function translateError(message: string): string {
   const m = message.toLowerCase();
   if (m.includes("invalid login credentials"))
-    return "이메일 또는 비밀번호가 올바르지 않습니다.";
+    return "아이디 또는 비밀번호가 올바르지 않습니다.";
   if (m.includes("user already registered"))
-    return "이미 가입된 이메일입니다. 로그인 탭에서 시도해보세요.";
-  if (m.includes("email not confirmed"))
-    return "메일함에서 인증 링크를 먼저 눌러주세요. (개발 중엔 Supabase의 Confirm email 토글 OFF 권장)";
+    return "이미 사용 중인 아이디입니다. 로그인 탭에서 시도해보세요.";
+  if (m.includes("email address") && m.includes("invalid"))
+    return "아이디에 허용되지 않은 문자가 들어있어요.";
   if (m.includes("password should be at least"))
     return "비밀번호는 최소 6자 이상이어야 합니다.";
   if (m.includes("rate limit"))
