@@ -1,96 +1,99 @@
-import { Map, TrendingUp, CalendarCheck2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { SoonCard } from "@/components/shared/SoonCard";
-import { computeDDay } from "@/features/home/dday";
+import { GoalForm } from "@/features/roadmap/GoalForm";
+import { PlanView } from "@/features/roadmap/PlanView";
+import type { Goal, Subject } from "@/features/roadmap/generator";
+import { SUNEUNG_DATE } from "@/features/home/mockData";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getWeekSessions } from "@/lib/supabase/queries";
 
-export default function RoadmapPage() {
-  const dday = computeDDay();
-  // 간단한 주 계산: 남은 일수 / 7
-  const weeks = Math.max(0, Math.ceil(dday.days / 7));
+export const dynamic = "force-dynamic";
+
+type ProfileGoal = {
+  target_university: string | null;
+  target_score: number | null;
+  start_score: number | null;
+  priority_subjects: string[] | null;
+  weekly_hours: number | null;
+};
+
+export default async function RoadmapPage() {
+  let profile: ProfileGoal | null = null;
+  let isAuthed = false;
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      isAuthed = true;
+      const { data } = await supabase
+        .from("profiles")
+        .select(
+          "target_university, target_score, start_score, priority_subjects, weekly_hours"
+        )
+        .eq("id", user.id)
+        .maybeSingle();
+      profile = (data ?? null) as ProfileGoal | null;
+    }
+  } catch {
+    isAuthed = false;
+  }
+
+  const hasGoal =
+    !!profile?.target_university &&
+    profile?.target_score != null &&
+    profile?.start_score != null;
+
+  // 이번 주 학습 시간 계산
+  let hoursThisWeek = 0;
+  if (isAuthed) {
+    const sessions = await getWeekSessions();
+    const monday = new Date();
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+    const secs = sessions
+      .filter((s) => new Date(s.ended_at) >= monday)
+      .reduce((a, s) => a + s.seconds, 0);
+    hoursThisWeek = secs / 3600;
+  }
 
   return (
     <>
       <PageHeader
         eyebrow="roadmap"
         title="D-day 로드맵"
-        subtitle="목표를 역산한 주간·일간 플랜."
+        subtitle="목표를 역산한 주간 계획."
       />
 
-      <div className="px-5 pb-2">
-        <div className="frosted rounded-3xl p-5 shadow-[0_16px_50px_-30px_rgba(31,35,64,0.2)]">
-          <p className="text-[11px] tracking-[0.25em] text-[var(--text-mid)] uppercase">
-            2026 수능까지
-          </p>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-[44px] leading-none font-semibold text-[var(--text-dark)]">
-              {dday.label}
-            </span>
-            <span className="text-sm text-[var(--text-mid)]">
-              약 {weeks}주 남음
-            </span>
-          </div>
-          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-            <MiniStat
-              icon={CalendarCheck2}
-              label="주간 플랜"
-              value="미설정"
-              tint="var(--cta)"
-            />
-            <MiniStat
-              icon={TrendingUp}
-              label="목표 대학"
-              value="미설정"
-              tint="var(--gold)"
-            />
-            <MiniStat
-              icon={Map}
-              label="진도"
-              value="—"
-              tint="var(--lavender)"
-            />
-          </div>
+      {!isAuthed && (
+        <div className="mx-5 mb-3 rounded-2xl bg-white/70 p-4 text-sm text-[var(--text-mid)] ring-1 ring-[var(--border-strong)]">
+          로그인 후 목표를 저장하면 수능까지의 주간 계획이 자동 생성됩니다.
         </div>
-      </div>
+      )}
 
-      <SoonCard
-        icon={Map}
-        title="AI 개인화 로드맵"
-        description="목표 대학·시작 성적·과목 우선순위를 입력하면 주간 플랜이 자동 생성되고, 실행 결과에 따라 매주 재조정됩니다. 프리미엄 Phase 2에서 열립니다."
-        phase="phase 2"
-        tint="var(--lavender)"
-      />
+      {isAuthed && !hasGoal && (
+        <div className="px-5 pb-6">
+          <GoalForm />
+        </div>
+      )}
+
+      {isAuthed && hasGoal && profile && (
+        <PlanView
+          goal={
+            {
+              targetUniversity: profile.target_university!,
+              targetScore: profile.target_score!,
+              startScore: profile.start_score!,
+              prioritySubjects:
+                (profile.priority_subjects as Subject[] | null) ?? [],
+              weeklyHours: profile.weekly_hours ?? 40,
+            } satisfies Goal
+          }
+          targetDday={SUNEUNG_DATE}
+          hoursThisWeek={hoursThisWeek}
+        />
+      )}
     </>
-  );
-}
-
-function MiniStat({
-  icon: Icon,
-  label,
-  value,
-  tint,
-}: {
-  icon: typeof Map;
-  label: string;
-  value: string;
-  tint: string;
-}) {
-  return (
-    <div className="rounded-2xl bg-white/70 px-3 py-3 ring-1 ring-[var(--border-strong)]">
-      <div
-        className="mx-auto flex h-8 w-8 items-center justify-center rounded-xl"
-        style={{
-          background: `color-mix(in oklab, ${tint} 18%, white)`,
-          color: tint,
-        }}
-      >
-        <Icon size={15} />
-      </div>
-      <p className="mt-1.5 text-[10px] tracking-wide text-[var(--text-light)] uppercase">
-        {label}
-      </p>
-      <p className="text-[12px] font-semibold text-[var(--text-dark)]">
-        {value}
-      </p>
-    </div>
   );
 }

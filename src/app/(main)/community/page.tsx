@@ -1,8 +1,36 @@
-import { Users, ShieldCheck, MessageCircle, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { SoonCard } from "@/components/shared/SoonCard";
+import { ROOMS } from "@/features/community/rooms";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export default function CommunityPage() {
+export const dynamic = "force-dynamic";
+
+export default async function CommunityPage() {
+  // 각 방의 최신 글 수 + 마지막 글 미리보기
+  type RoomCount = { room: string; count: number; latest?: string };
+  const stats: Record<string, { count: number; latest?: string }> = {};
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    // 최근 50개만 스캔해서 방별 카운트
+    const { data } = await supabase
+      .from("community_posts")
+      .select("room, content, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (data) {
+      for (const p of data) {
+        const s = stats[p.room] ?? { count: 0, latest: undefined };
+        s.count += 1;
+        if (!s.latest) s.latest = p.content;
+        stats[p.room] = s;
+      }
+    }
+  } catch {
+    // env 미설정 시 stats 비어있음
+  }
+
   return (
     <>
       <PageHeader
@@ -11,8 +39,9 @@ export default function CommunityPage() {
         subtitle="같은 목표, 같은 속도의 사람들."
       />
 
-      <div className="flex flex-col gap-3 px-5 pb-2">
-        <div className="frosted flex items-start gap-3 rounded-3xl p-5 shadow-[0_16px_50px_-30px_rgba(31,35,64,0.2)]">
+      <div className="flex flex-col gap-3 px-5 pb-6">
+        {/* 인증 배지 */}
+        <div className="frosted flex items-start gap-3 rounded-3xl p-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--success)]/15 text-[var(--success)]">
             <ShieldCheck size={18} />
           </div>
@@ -21,77 +50,71 @@ export default function CommunityPage() {
               N수생 인증 커뮤니티
             </p>
             <p className="mt-0.5 text-[12px] leading-relaxed text-[var(--text-mid)]">
-              졸업연도 인증을 통과한 사람만 입장합니다. 초·중·고등학생 혼재 없이
-              같은 나이대의 대화.
+              초·중·고등학생 혼재 없이. Phase 2에 졸업연도 증빙 추가 예정.
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <PreviewCard
-            icon={Users}
-            title="목표군별 방"
-            desc="의대·서울대·한의대 등"
-            tint="var(--cta)"
-          />
-          <PreviewCard
-            icon={MessageCircle}
-            title="익명 고민방"
-            desc="슬럼프·멘탈"
-            tint="var(--lavender)"
-          />
-          <PreviewCard
-            icon={Sparkles}
-            title="멘토 매칭"
-            desc="합격자 1:1"
-            tint="var(--gold)"
-          />
-          <PreviewCard
-            icon={ShieldCheck}
-            title="안전 가드"
-            desc="상업 광고·도박 자동 필터"
-            tint="var(--success)"
-          />
-        </div>
+        {/* 방 리스트 */}
+        <p className="mt-2 text-[11px] tracking-[0.25em] text-[var(--text-mid)] uppercase">
+          목표군별 방
+        </p>
+        <ul className="flex flex-col gap-2">
+          {ROOMS.map((r) => {
+            const s = stats[r.id] ?? { count: 0 };
+            return (
+              <li key={r.id}>
+                <Link
+                  href={`/community/${encodeURIComponent(r.id)}`}
+                  className="flex items-center gap-3 rounded-2xl bg-white/70 px-3.5 py-3 ring-1 ring-[var(--border-strong)] transition-colors hover:bg-white"
+                >
+                  <div
+                    className="flex h-11 w-11 items-center justify-center rounded-2xl text-lg"
+                    style={{
+                      background: `color-mix(in oklab, ${r.tint} 22%, white)`,
+                    }}
+                  >
+                    {r.emoji}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-sm font-semibold text-[var(--text-dark)]">
+                        {r.name}
+                      </p>
+                      <p className="text-[11px] text-[var(--text-light)]">
+                        {r.description}
+                      </p>
+                    </div>
+                    {s.latest ? (
+                      <p className="mt-0.5 truncate text-[12px] text-[var(--text-mid)]">
+                        {s.latest}
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 text-[11px] text-[var(--text-light)]">
+                        아직 글이 없어요
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5">
+                    {s.count > 0 && (
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
+                        style={{ background: r.tint }}
+                      >
+                        {s.count}
+                      </span>
+                    )}
+                    <ChevronRight
+                      size={16}
+                      className="text-[var(--text-light)]"
+                    />
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </div>
-
-      <SoonCard
-        icon={Users}
-        title="Phase 2 후반 오픈"
-        description="커뮤니티는 안전·신뢰 설계가 필요해서 MVP 이후 천천히 엽니다. 먼저 만든 학습 지표(QI·오답)가 대화의 근거가 되도록 연동될 예정이에요."
-        phase="phase 2"
-        tint="var(--success)"
-      />
     </>
-  );
-}
-
-function PreviewCard({
-  icon: Icon,
-  title,
-  desc,
-  tint,
-}: {
-  icon: typeof Users;
-  title: string;
-  desc: string;
-  tint: string;
-}) {
-  return (
-    <div className="rounded-2xl bg-white/60 p-4 ring-1 ring-[var(--border-strong)]">
-      <div
-        className="flex h-9 w-9 items-center justify-center rounded-xl"
-        style={{
-          background: `color-mix(in oklab, ${tint} 18%, white)`,
-          color: tint,
-        }}
-      >
-        <Icon size={16} />
-      </div>
-      <p className="mt-3 text-sm font-semibold text-[var(--text-dark)]">
-        {title}
-      </p>
-      <p className="text-[11px] text-[var(--text-light)]">{desc}</p>
-    </div>
   );
 }
